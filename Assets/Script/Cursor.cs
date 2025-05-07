@@ -3,19 +3,47 @@ using UnityEngine;
 
 public class Cursor
 {
-    Vector2Int moveFoward;
-    Vector2Int moveBackward;
-    Vector2Int moveRight;
-    Vector2Int moveLeft;
-    
-    public Cursor(Vector2Int actualPosition, Vector2Int moveFoward, Vector2Int moveBackward, Vector2Int moveRight, Vector2Int moveLeft)
+    private Vector2Int position;  // Posición del cursor
+    private Transform cursorTransform;  // Transform del cursor
+
+    private int boardWidth = 4;
+    private int boardHeight = 4;
+
+    public Cursor(Transform cursorObject, int x, int y)
     {
-        this.moveBackward = new Vector2Int(0,1);
-        new Vector3(moveFoward.x, 0, moveFoward.y);
+        this.cursorTransform = cursorObject;
+        this.boardWidth = x;
+        this.boardHeight = y;
+        this.position = new Vector2Int(0, 0);
+    }
 
-        if (Input.GetKeyDown(KeyCode.W)) {
-            actualPosition= actualPosition + moveFoward;
-        }
+    
+    public void Startingposition()
+    {
+        cursorTransform.position = new Vector3(position.x, 0, position.y);
+    }
 
+    public void Move(Vector2Int direction)
+    {
+        position += direction;
+
+        //Eje X
+        if (position.x < 0)
+            position.x = boardWidth - 1;
+        else if (position.x >= boardWidth)
+            position.x = 0;
+
+        //Eje y
+        if (position.y < 0)
+            position.y = boardHeight - 1;
+        else if (position.y >= boardHeight)
+            position.y = 0;
+
+        cursorTransform.position = new Vector3(position.x, 0, position.y);
+    }
+
+    public Vector2Int GetPosition()
+    {
+        return position;
     }
 }
