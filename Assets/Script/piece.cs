@@ -7,6 +7,7 @@ public class Piece
     public int life = 3;
     public GameObject pieceGO;
 
+
     public Piece(PieceOwner owner, Vector2Int position, GameObject piecePrefab)
     {
         this.owner = owner;

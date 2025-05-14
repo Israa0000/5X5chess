@@ -4,6 +4,7 @@ public class Tile
 {
     public int x;
     public int z;
+    public Piece linkedEntity = null;
     public GameObject tileGO;
 
     public Tile(int x, int z, GameObject prefab, Transform parent)

@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using UnityEngine;
 
 public class Board
@@ -6,7 +7,8 @@ public class Board
     public int tileCountZ;
     public Tile[,] tiles;
 
-    public Board(int tileCountX, int tileCountZ, GameObject whiteTile, GameObject blackTile, Transform boardParent)
+
+    public Board(int tileCountX, int tileCountZ, GameObject whiteTile, GameObject blackTile, Transform boardParent, Piece LinkedEntity)
     {
         this.tileCountX = tileCountX;
         this.tileCountZ = tileCountZ;
@@ -21,5 +23,15 @@ public class Board
                 tiles[x, z] = new Tile(x, z, prefab, boardParent);
             }
         }
+
+        if (tiles[1, 1].linkedEntity == null)
+            Debug.Log("vacía");
+        else
+            Debug.Log("ocupada");
+
+    }
+    public void At()
+    {
+
     }
 }

@@ -350,12 +350,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   whiteTile: {fileID: 3195472031376642634, guid: 5cead3b4874a52b40a156a3a85ad37da, type: 3}
   blackTile: {fileID: 3195472031376642634, guid: 0f1aedad2df36e447b5a5d83da211b05, type: 3}
-  piecePrefab: {fileID: 1000012089885188, guid: 6771efaae8343104b88ef1dd839fd639, type: 3}
+  WhitePieceGO: {fileID: 6490480045421794550, guid: 935f1c7caa10cb646a41b252ac237dc0, type: 3}
+  BlackPieceGO: {fileID: 3768925348116806761, guid: 247269c2d0121644581db7468ec8da63, type: 3}
   tileCountX: 5
   tileCountZ: 5
   tileSize: 1
   boardParent: {fileID: 2009604404}
   cursorPrefab: {fileID: 8909307330954986271, guid: 825ec0f3192c904459244092c7ec4cd8, type: 3}
+  piecesAmount: 3
 --- !u!1 &2009604403
 GameObject:
   m_ObjectHideFlags: 0
