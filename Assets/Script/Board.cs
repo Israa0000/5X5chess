@@ -6,6 +6,7 @@ public class Board
     public int tileCountX;
     public int tileCountZ;
     public Tile[,] tiles;
+    public Cursor cursor;
 
 
     public Board(int tileCountX, int tileCountZ, GameObject whiteTile, GameObject blackTile, Transform boardParent, Piece LinkedEntity)
@@ -22,16 +23,19 @@ public class Board
                 GameObject prefab = (x + z) % 2 == 0 ? whiteTile : blackTile;
                 tiles[x, z] = new Tile(x, z, prefab, boardParent);
             }
-        }
-
-        if (tiles[1, 1].linkedEntity == null)
-            Debug.Log("vacía");
-        else
-            Debug.Log("ocupada");
+        } 
 
     }
-    public void At()
+    public Tile At(Vector2Int pos)
     {
-
+        return tiles[pos.x, pos.y];
     }
+
+    public bool IsOOB(Vector2Int pos)
+    {
+        return pos.x < 0 || pos.x >= tileCountX || pos.y < 0 || pos.y >= tileCountZ;
+    }
+
 }
+
+
