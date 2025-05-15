@@ -31,6 +31,7 @@ public class GameManager : MonoBehaviour
     Piece linkedEntity = null;
     Piece selectedPiece = null;
 
+    private PieceOwner currentTurn = PieceOwner.Player1;
 
     private Vector2Int moveForward = new Vector2Int(0, 1);
     private Vector2Int moveBackward = new Vector2Int(0, -1);
@@ -50,25 +51,29 @@ public class GameManager : MonoBehaviour
 
         InstantiatePieces(4, BlackPieceGO, BlackPieces, PieceOwner.Player2);
         InstantiatePieces(0, WhitePieceGO, WhitePieces, PieceOwner.Player1);
+
+        GameEvents.TurnChange.AddListener(OnTurnChange);
     }
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.W))
+        if (!IsMyTurn()) return;
+
+        if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
             TryMove(moveForward);
             Debug.Log($"Posición del cursor: ({cursor.GetPosition().x}, {cursor.GetPosition().y})");
         }
-        if (Input.GetKeyDown(KeyCode.S))
+        if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
         {
             TryMove(moveBackward);
             Debug.Log($"Posición del cursor: ({cursor.GetPosition().x}, {cursor.GetPosition().y})");
         }
-        if (Input.GetKeyDown(KeyCode.D))
+        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
         {
             TryMove(moveRight);
             Debug.Log($"Posición del cursor: ({cursor.GetPosition().x}, {cursor.GetPosition().y})");
         }
-        if (Input.GetKeyDown(KeyCode.A))
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
             TryMove(moveLeft);
             Debug.Log($"Posición del cursor: ({cursor.GetPosition().x}, {cursor.GetPosition().y})");
@@ -85,8 +90,8 @@ public class GameManager : MonoBehaviour
         //Move() esta en cursor
         //Startingposition() en cursor 
         //GetPosition() esta en cursor
-        //At esta en board
-        //IsOOB esta en board
+        //At() esta en board
+        //IsOOB() esta en board
 
     //ELEGIR PIEZA
     public void ChoosePiece()
@@ -102,7 +107,7 @@ public class GameManager : MonoBehaviour
         Vector2Int cursorPos = cursor.GetPosition();
         Tile tile = board.At(cursorPos);
 
-        if (tile.linkedEntity != null)
+        if (tile.linkedEntity != null && tile.linkedEntity.owner == currentTurn)
         {
             selectedPiece = tile.linkedEntity;
             Debug.Log("Hay una pieza en esta casilla.");
@@ -147,7 +152,7 @@ public class GameManager : MonoBehaviour
         Vector2Int newPos = currentPos + direction;
 
         // direccion dentro del tablero
-        if (!board.IsOOB(pos))
+        if (!board.IsOOB(pos))// Out Of Bounds
         {
             Tile currentTile = board.At(currentPos);
             Tile targetTile = board.At(newPos);
@@ -178,7 +183,21 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //CAMBIO DE TURNO
+    void OnTurnChange()
+    {
+        currentTurn = (currentTurn == PieceOwner.Player1) ? PieceOwner.Player2 : PieceOwner.Player1;
+        selectedPiece = null;
+        Debug.Log($"Turno cambiado. Ahora juega: {currentTurn}");
 
+        TurnTime turnTime = FindObjectOfType<TurnTime>();
+        if (turnTime != null)
+            turnTime.ResetTime();
+    }
 
+    bool IsMyTurn()
+    {
+        return true;
+    }
 }
 
