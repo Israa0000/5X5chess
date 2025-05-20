@@ -83,6 +83,11 @@ public class GameManager : MonoBehaviour
         {
             ChoosePiece();
         }
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            TryAttack();
+        }
+        UpdateCooldowns();
     }
 
     //FUNCIONES 
@@ -198,6 +203,125 @@ public class GameManager : MonoBehaviour
     bool IsMyTurn()
     {
         return true;
+    }
+
+    //ATAQUES
+    void TryAttack()
+    {
+        if (selectedPiece == null)
+        {
+            Debug.Log("No hay pieza seleccionada para atacar.");
+            return;
+        }
+
+        if (selectedPiece.coolDown > 0f)
+        {
+            Debug.Log("La pieza está en cooldown.");
+            return;
+        }
+
+        Vector2Int[] directions = new Vector2Int[]
+        {
+        new Vector2Int(0, 1),   // Arriba
+        new Vector2Int(0, -1),  // Abajo
+        new Vector2Int(1, 0),   // Derecha
+        new Vector2Int(-1, 0)   // Izquierda
+        };
+
+        foreach (var dir in directions)
+        {
+            Vector2Int targetPos = selectedPiece.position + dir;
+            if (board.IsOOB(targetPos)) continue;
+
+            Tile targetTile = board.At(targetPos);
+            if (targetTile.linkedEntity != null && targetTile.linkedEntity.owner != selectedPiece.owner)
+            {
+                ChangePieceLife(targetTile.linkedEntity, -1);
+                Debug.Log($"¡Atacado a ({targetPos.x}, {targetPos.y})!");
+            }
+        }
+
+        // Inicia cooldown 
+        selectedPiece.coolDown = 2f;
+
+        SetPieceCooldownVisual(selectedPiece, true);
+    }
+
+    void UpdateCooldowns()
+    {
+        foreach (var piece in WhitePieces)
+            UpdatePieceCooldown(piece);
+        foreach (var piece in BlackPieces)
+            UpdatePieceCooldown(piece);
+    }
+
+    void UpdatePieceCooldown(Piece piece)
+    {
+        if (piece.coolDown > 0f)
+        {
+            piece.coolDown -= Time.deltaTime;
+            if (piece.coolDown <= 0f)
+            {
+                piece.coolDown = 0f;
+                SetPieceCooldownVisual(piece, false);
+            }
+        }
+    }
+
+    void SetPieceCooldownVisual(Piece piece, bool inCooldown)
+    {
+        if (piece.pieceGO != null)
+        {
+            var renderer = piece.pieceGO.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                renderer.material.color = inCooldown ? Color.gray : Color.white;
+            }
+        }
+    }
+
+
+    //VIDA Y ALTURA
+    // Cambia la vida de una pieza y actualiza su altura
+    void ChangePieceLife(Piece piece, int delta)
+    {
+        piece.life += delta;
+        UpdatePieceHeight(piece);
+
+        if (piece.life <= 0)
+        {
+            RemovePiece(piece);
+        }
+    }
+
+    // Actualiza la altura del modelo según la vida
+    void UpdatePieceHeight(Piece piece)
+    {
+        if (piece.pieceGO != null)
+        {
+            Vector3 scale = piece.pieceGO.transform.localScale;
+            scale.y = Mathf.Max(0.1f, piece.life); // Evita altura 0 o negativa
+            piece.pieceGO.transform.localScale = scale;
+        }
+    }
+
+    // Elimina la pieza del tablero, lista y escena
+    void RemovePiece(Piece piece)
+    {
+        board.At(piece.position).linkedEntity = null;
+
+        if (piece.owner == PieceOwner.Player1)
+            WhitePieces.Remove(piece);
+        else if (piece.owner == PieceOwner.Player2)
+            BlackPieces.Remove(piece);
+
+        if (piece.pieceGO != null)
+            Destroy(piece.pieceGO);
+
+        if (selectedPiece == piece)
+            selectedPiece = null;
+
+        Debug.Log("¡Pieza destruida!");
     }
 }
 

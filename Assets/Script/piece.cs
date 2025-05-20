@@ -6,7 +6,7 @@ public class Piece
     public Vector2Int position;
     public int life = 3;
     public GameObject pieceGO;
-
+    public float coolDown = 2;
 
     public Piece(PieceOwner owner, Vector2Int position, GameObject piecePrefab)
     {
