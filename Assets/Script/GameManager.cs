@@ -1,6 +1,7 @@
 using JetBrains.Annotations;
 using NUnit.Framework;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using static UnityEditor.PlayerSettings;
 
@@ -17,10 +18,22 @@ public class GameManager : MonoBehaviour
     [SerializeField] int tileCountZ = 5;
     [SerializeField] float tileSize = 1f;
     [SerializeField] int piecesAmount = 3;
+    [SerializeField] float baseHeight = 1.5f;
 
     [Header("Transform")]
     [SerializeField] Transform boardParent;
     [SerializeField] Transform cursorPrefab;
+
+    [Header("Text")]
+    [SerializeField] TMP_Text currentPlayer;
+
+    [Header("Cursors")]
+    [SerializeField] Transform cursorPrefabPlayer1;
+    [SerializeField] Transform cursorPrefabPlayer2;
+
+    private Cursor cursorPlayer1;
+    private Cursor cursorPlayer2;
+    private Cursor activeCursor;
 
     Vector2Int position;
     PieceOwner owner;
@@ -46,13 +59,26 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         board = new Board(tileCountX, tileCountZ, whiteTile, blackTile, boardParent, linkedEntity);
-        cursor = new Cursor(Instantiate(cursorPrefab), tileCountX, tileCountZ);
-        cursor.Startingposition();
 
-        InstantiatePieces(4, BlackPieceGO, BlackPieces, PieceOwner.Player2);
-        InstantiatePieces(0, WhitePieceGO, WhitePieces, PieceOwner.Player1);
+        // Instancia ambos cursores
+        cursorPlayer1 = new Cursor(Instantiate(cursorPrefabPlayer1), tileCountX, tileCountZ);
+        cursorPlayer2 = new Cursor(Instantiate(cursorPrefabPlayer2), tileCountX, tileCountZ);
+
+        cursorPlayer1.Startingposition();
+        cursorPlayer2.Startingposition();
+
+        // Solo el cursor del jugador activo está visible
+        cursorPlayer1.GetTransform().gameObject.SetActive(true);
+        cursorPlayer2.GetTransform().gameObject.SetActive(false);
+
+        activeCursor = cursorPlayer1;
+
+        InstantiatePieces(4, BlackPieceGO, BlackPieces, PieceOwner.Player2, baseHeight);
+        InstantiatePieces(0, WhitePieceGO, WhitePieces, PieceOwner.Player1, baseHeight);
 
         GameEvents.TurnChange.AddListener(OnTurnChange);
+
+        currentPlayer.text = currentTurn.ToString();
     }
     void Update()
     {
@@ -92,24 +118,23 @@ public class GameManager : MonoBehaviour
 
     //FUNCIONES 
 
-        //Move() esta en cursor
-        //Startingposition() en cursor 
-        //GetPosition() esta en cursor
-        //At() esta en board
-        //IsOOB() esta en board
+    //Move() esta en cursor
+    //Startingposition() en cursor 
+    //GetPosition() esta en cursor
+    //At() esta en board
+    //IsOOB() esta en board
 
     //ELEGIR PIEZA
     public void ChoosePiece()
     {
         if (selectedPiece != null)
         {
-            // Si ya hay una pieza seleccionada, deja de estar seleccionada
             selectedPiece = null;
             Debug.Log("Pieza deseleccionada.");
             return;
         }
-        
-        Vector2Int cursorPos = cursor.GetPosition();
+
+        Vector2Int cursorPos = activeCursor.GetPosition();
         Tile tile = board.At(cursorPos);
 
         if (tile.linkedEntity != null && tile.linkedEntity.owner == currentTurn)
@@ -125,12 +150,13 @@ public class GameManager : MonoBehaviour
     }
 
     //INSTANCIAR PIEZAS
-    void InstantiatePieces(int startRow, GameObject piecePrefab, List<Piece> pieceList, PieceOwner owner)
+    void InstantiatePieces(int startRow, GameObject piecePrefab, List<Piece> pieceList, PieceOwner owner, float baseHeight)
     {
         for (int i = 0; i < piecesAmount; i++)
         {
-            Vector2Int pos = new Vector2Int(1 + i, startRow);
-            Piece newPiece = new Piece(owner, pos, piecePrefab);
+            Vector2Int pos = new Vector2Int(startRow, 1 + i);
+            Piece newPiece = new Piece(owner, pos, piecePrefab, baseHeight);
+            newPiece.SetBoard(board);
             pieceList.Add(newPiece);
             board.At(pos).linkedEntity = newPiece;
         }
@@ -145,8 +171,8 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            cursor.Move(direction);
-            Debug.Log($"Posición del cursor: ({cursor.GetPosition().x}, {cursor.GetPosition().y})");
+            activeCursor.Move(direction);
+            Debug.Log($"Posición del cursor: ({activeCursor.GetPosition().x}, {activeCursor.GetPosition().y})");
         }
     }
 
@@ -156,8 +182,8 @@ public class GameManager : MonoBehaviour
         Vector2Int currentPos = selectedPiece.position;
         Vector2Int newPos = currentPos + direction;
 
-        // direccion dentro del tablero
-        if (!board.IsOOB(pos))// Out Of Bounds
+        // dirección dentro del tablero
+        if (!board.IsOOB(newPos)) // Corrige aquí también: usa newPos, no pos
         {
             Tile currentTile = board.At(currentPos);
             Tile targetTile = board.At(newPos);
@@ -172,8 +198,8 @@ public class GameManager : MonoBehaviour
                 selectedPiece.position = newPos;
                 selectedPiece.pieceGO.transform.position = new Vector3(newPos.x, 0, newPos.y);
 
-                // Actualiza posiscion de cursor
-                cursor.Move(newPos - cursor.GetPosition());
+                // Actualiza posición del cursor activo
+                activeCursor.Move(newPos - activeCursor.GetPosition());
 
                 Debug.Log($"Pieza movida a ({newPos.x}, {newPos.y})");
             }
@@ -188,16 +214,41 @@ public class GameManager : MonoBehaviour
         }
     }
 
+
     //CAMBIO DE TURNO
     void OnTurnChange()
     {
+        // Guarda la posición del cursor saliente
+        Vector2Int lastCursorPos = activeCursor.GetPosition();
+
+        // Cambia el turno
         currentTurn = (currentTurn == PieceOwner.Player1) ? PieceOwner.Player2 : PieceOwner.Player1;
+        currentPlayer.text = currentTurn.ToString();
         selectedPiece = null;
         Debug.Log($"Turno cambiado. Ahora juega: {currentTurn}");
 
         TurnTime turnTime = FindObjectOfType<TurnTime>();
         if (turnTime != null)
+        {
             turnTime.ResetTime();
+            turnTime.SetBarForPlayer(currentTurn);
+        }
+
+        // Cambia el cursor activo y copia la posición
+        if (currentTurn == PieceOwner.Player1)
+        {
+            cursorPlayer1.GetTransform().gameObject.SetActive(true);
+            cursorPlayer2.GetTransform().gameObject.SetActive(false);
+            cursorPlayer1.SetPosition(lastCursorPos); // <-- Copia la posición
+            activeCursor = cursorPlayer1;
+        }
+        else
+        {
+            cursorPlayer1.GetTransform().gameObject.SetActive(false);
+            cursorPlayer2.GetTransform().gameObject.SetActive(true);
+            cursorPlayer2.SetPosition(lastCursorPos); // <-- Copia la posición
+            activeCursor = cursorPlayer2;
+        }
     }
 
     bool IsMyTurn()
@@ -236,7 +287,7 @@ public class GameManager : MonoBehaviour
             Tile targetTile = board.At(targetPos);
             if (targetTile.linkedEntity != null && targetTile.linkedEntity.owner != selectedPiece.owner)
             {
-                ChangePieceLife(targetTile.linkedEntity, -1);
+                targetTile.linkedEntity.ChangePieceLife(-0.5f);
                 Debug.Log($"¡Atacado a ({targetPos.x}, {targetPos.y})!");
             }
         }
@@ -278,50 +329,6 @@ public class GameManager : MonoBehaviour
                 renderer.material.color = inCooldown ? Color.gray : Color.white;
             }
         }
-    }
-
-
-    //VIDA Y ALTURA
-    // Cambia la vida de una pieza y actualiza su altura
-    void ChangePieceLife(Piece piece, int delta)
-    {
-        piece.life += delta;
-        UpdatePieceHeight(piece);
-
-        if (piece.life <= 0)
-        {
-            RemovePiece(piece);
-        }
-    }
-
-    // Actualiza la altura del modelo según la vida
-    void UpdatePieceHeight(Piece piece)
-    {
-        if (piece.pieceGO != null)
-        {
-            Vector3 scale = piece.pieceGO.transform.localScale;
-            scale.y = Mathf.Max(0.1f, piece.life); // Evita altura 0 o negativa
-            piece.pieceGO.transform.localScale = scale;
-        }
-    }
-
-    // Elimina la pieza del tablero, lista y escena
-    void RemovePiece(Piece piece)
-    {
-        board.At(piece.position).linkedEntity = null;
-
-        if (piece.owner == PieceOwner.Player1)
-            WhitePieces.Remove(piece);
-        else if (piece.owner == PieceOwner.Player2)
-            BlackPieces.Remove(piece);
-
-        if (piece.pieceGO != null)
-            Destroy(piece.pieceGO);
-
-        if (selectedPiece == piece)
-            selectedPiece = null;
-
-        Debug.Log("¡Pieza destruida!");
     }
 }
 

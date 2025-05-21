@@ -1,33 +1,56 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI; 
 
 public class TurnTime : MonoBehaviour
 {
+    public Color player1Color = Color.blue;
+    public Color player2Color = Color.red;
     public float time;
     public float turnTimeLimit = 15;
     private bool running = true;
 
-    //el temporizador se utiliza para cambiar turno despues de q se sobre pase el tiempo,
-    //una vez q se ponga en true, se tiene q volver a poner en false para el siguiente turno 
+    [Header("UI")]
+    public Image timeBarFill;
 
-    private void Update() 
+    void Update()
     {
         if (!running) return;
 
         time += Time.deltaTime;
 
+        if (timeBarFill != null)
+        {
+            timeBarFill.fillAmount = Mathf.Lerp(1f, 0f, time / turnTimeLimit);
+        }
+
         if (time >= turnTimeLimit)
         {
-            running = false; // Detiene el temporizador
+            Debug.Log("Tiempo agotado, cambiando turno");
+            running = false;
             GameEvents.TurnChange.Invoke();
+        }
+    }
+
+    public void SetBarForPlayer(PieceOwner owner)
+    {
+        if (timeBarFill != null)
+        {
+            timeBarFill.color = (owner == PieceOwner.Player1) ? player1Color : player2Color;
+
+            // Cambia la dirección de llenado
+            timeBarFill.fillOrigin = (owner == PieceOwner.Player1) ? 0 : 1;
         }
     }
 
     public void ResetTime()
     {
         time = 0;
-        running = true; // Reactiva el temporizador para el nuevo turno
+        running = true;
+        if (timeBarFill != null)
+            timeBarFill.fillAmount = 1f;
     }
+
 }
 

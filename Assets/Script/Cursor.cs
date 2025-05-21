@@ -41,9 +41,20 @@ public class Cursor
 
         cursorTransform.position = new Vector3(position.x, 0, position.y);
     }
+    public void SetPosition(Vector2Int newPosition)
+    {
+        position = newPosition;
+        if (cursorTransform != null)
+            cursorTransform.position = new Vector3(position.x, cursorTransform.position.y, position.y);
+    }
 
     public Vector2Int GetPosition()
     {
         return position;
+    }
+
+    public Transform GetTransform()
+    {
+        return cursorTransform;
     }
 }
