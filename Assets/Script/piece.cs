@@ -7,19 +7,14 @@ public class Piece
     public float life = 1.5f;
     public GameObject pieceGO;
     public float coolDown = 2;
-    public float baseHeight = 1.5f;
-    public float additionalHeightPerHP = 0.5f;
     Board board;
 
     public Piece(PieceOwner owner, Vector2Int position, GameObject piecePrefab, float baseHeight)
     {
         this.owner = owner;
         this.position = position;
-        this.baseHeight = baseHeight;
-
         pieceGO = Object.Instantiate(piecePrefab, new Vector3(position.x, 0, position.y), Quaternion.identity);
         pieceGO.name = $"Piece_{owner}_{position.x}_{position.y}";
-
         Vector3 scale = pieceGO.transform.localScale;
         scale.y = baseHeight;
         pieceGO.transform.localScale = scale;
@@ -57,6 +52,8 @@ public class Piece
             board.At(position).linkedEntity = null;
 
         if (pieceGO != null)
-            GameObject.Destroy(pieceGO);
+            Object.Destroy(pieceGO);
+
+        Debug.Log("¡Pieza destruida!");
     }
 }

@@ -1,10 +1,9 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class Cursor
 {
-    private Vector2Int position;  // Posición del cursor
-    private Transform cursorTransform;  // Transform del cursor
+    private Vector2Int position;
+    private Transform cursorTransform;
 
     private int boardWidth = 4;
     private int boardHeight = 4;
@@ -17,7 +16,6 @@ public class Cursor
         this.position = new Vector2Int(0, 0);
     }
 
-    
     public void Startingposition()
     {
         cursorTransform.position = new Vector3(position.x, 0, position.y);
@@ -41,6 +39,7 @@ public class Cursor
 
         cursorTransform.position = new Vector3(position.x, 0, position.y);
     }
+
     public void SetPosition(Vector2Int newPosition)
     {
         position = newPosition;
