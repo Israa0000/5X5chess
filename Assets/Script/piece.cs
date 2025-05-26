@@ -54,6 +54,20 @@ public class Piece
         if (pieceGO != null)
             Object.Destroy(pieceGO);
 
+        var gm = GameObject.FindFirstObjectByType<GameManager>();
+        if (gm != null)
+        {
+            if (owner == PieceOwner.Player1)
+                gm.LightBluePieces.Remove(this);
+            else if (owner == PieceOwner.Player2)
+                gm.PinkPieces.Remove(this);
+
+            gm.CheckForGameEnd();
+        }
+
         Debug.Log("¡Pieza destruida!");
     }
+
+
+
 }

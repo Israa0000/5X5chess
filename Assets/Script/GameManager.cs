@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     [SerializeField] GameObject BlackPieceGO;
     [SerializeField] GameObject chestPrefab;
     [SerializeField] GameObject healthPickupPrefab;
+    [SerializeField] GameObject attackParticlePrefab;
+    [SerializeField] GameObject restartButton;
 
     [Header("Int and Float")]
     [SerializeField] int tileCountX = 5;
@@ -20,6 +22,9 @@ public class GameManager : MonoBehaviour
     [SerializeField] float baseHeight = 1.5f;
     [SerializeField] int minChests = 1;
     [SerializeField] int maxChests = 3;
+    [SerializeField] float maxCooldown = 2f;
+    [SerializeField] float minCooldown = 0.5f;
+
 
     [Header("Transform")]
     [SerializeField] Transform boardParent;
@@ -27,10 +32,12 @@ public class GameManager : MonoBehaviour
 
     [Header("Text")]
     [SerializeField] TMP_Text currentPlayer;
+    [SerializeField] TMP_Text victoryText;
+
 
     [Header("Cursor Materials")]
-    [SerializeField] Material materialCeleste;
-    [SerializeField] Material materialRosa;
+    [SerializeField] Material lightBlueMaterial;
+    [SerializeField] Material pinkMaterial;
 
     private Cursor cursor;
     public Board board;
@@ -42,10 +49,12 @@ public class GameManager : MonoBehaviour
     private Vector2Int moveRight = new Vector2Int(1, 0);
     private Vector2Int moveLeft = new Vector2Int(-1, 0);
 
-    private List<Piece> LightBluePieces = new List<Piece>();
-    private List<Piece> PinkPieces = new List<Piece>();
+    public List<Piece> LightBluePieces = new List<Piece>();
+    public List<Piece> PinkPieces = new List<Piece>();
     public List<Chest> chests = new List<Chest>();
     private List<HealthPickup> healthPickups = new List<HealthPickup>();
+
+    private bool gameEnded = false;
 
     void Start()
     {
@@ -64,13 +73,19 @@ public class GameManager : MonoBehaviour
         GameEvents.TurnChange.AddListener(OnTurnChange);
         currentPlayer.text = currentTurn.ToString();
 
-        // Inicializa la barra de tiempo con el color correcto
-        TurnTime turnTime = FindObjectOfType<TurnTime>();
+        TurnTime turnTime = FindFirstObjectByType<TurnTime>();
         if (turnTime != null)
             turnTime.SetBarForPlayer(currentTurn);
+
+        if (victoryText != null)
+            victoryText.gameObject.SetActive(false);
+        if (restartButton != null)
+            restartButton.SetActive(false);
     }
     void Update()
     {
+        if (gameEnded) return;
+
         if (!IsMyTurn()) return;
 
         if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
@@ -95,7 +110,7 @@ public class GameManager : MonoBehaviour
         var renderer = cursor.GetTransform().GetComponent<Renderer>();
         if (renderer != null)
         {
-            renderer.material = (owner == PieceOwner.Player1) ? materialCeleste : materialRosa;
+            renderer.material = (owner == PieceOwner.Player1) ? lightBlueMaterial : pinkMaterial;
         }
     }
 
@@ -210,7 +225,7 @@ public class GameManager : MonoBehaviour
 
         SpawnChests();
 
-        TurnTime turnTime = FindObjectOfType<TurnTime>();
+        TurnTime turnTime = FindFirstObjectByType<TurnTime>();
         if (turnTime != null)
         {
             turnTime.ResetTime();
@@ -257,17 +272,19 @@ public class GameManager : MonoBehaviour
             if (targetTile.linkedEntity is IOnAttack attackable)
             {
                 attackable.OnAttacked(1f);
+                PlayAttackParticle(targetTile.tileGO.transform.position, selectedPiece.owner);
                 Debug.Log($"¡Entidad atacada en ({targetPos.x}, {targetPos.y})!");
             }
             // SI ES ENEMIGO OTRA LOGICA
             else if (targetTile.linkedEntity is Piece piece && piece.owner != selectedPiece.owner)
             {
                 piece.ChangePieceLife(-0.5f);
+                PlayAttackParticle(targetTile.tileGO.transform.position, selectedPiece.owner);
                 Debug.Log($"¡Pieza atacada en ({targetPos.x}, {targetPos.y})!");
             }
         }
 
-        selectedPiece.coolDown = 2f;
+        selectedPiece.coolDown = GetCooldownForPlayer(selectedPiece.owner);
         SetPieceCooldownVisual(selectedPiece, true);
 
     }
@@ -324,6 +341,36 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //COOLDOWN DINAMICO
+
+    int GetPlayerPieceCount(PieceOwner owner)
+    {
+        if (owner == PieceOwner.Player1)
+            return LightBluePieces.Count;
+        else if (owner == PieceOwner.Player2)
+            return PinkPieces.Count;
+        return 0;
+    }
+
+    float GetCooldownForPlayer(PieceOwner owner)
+    {
+        int myCount = GetPlayerPieceCount(owner);
+        int enemyCount = GetPlayerPieceCount(owner == PieceOwner.Player1 ? PieceOwner.Player2 : PieceOwner.Player1);
+
+        if (myCount < enemyCount)
+        {
+            // Diferencia máxima posible
+            int maxDiff = Mathf.Max(GetPlayerPieceCount(PieceOwner.Player1), GetPlayerPieceCount(PieceOwner.Player2)) - 1;
+            int diff = enemyCount - myCount;
+            // Interpolación lineal: 2.0 (sin desventaja) a 0.5 (máxima desventaja)
+            float cooldown = Mathf.Lerp(2.0f, 0.5f, maxDiff == 0 ? 0 : (float)diff / maxDiff);
+            return Mathf.Clamp(cooldown, 0.5f, 2.0f);
+        }
+        else
+        {
+            return 2.0f;
+        }
+    }
 
     public void SpawnHealthPickup(Vector2Int pos)
     {
@@ -332,4 +379,62 @@ public class GameManager : MonoBehaviour
         healthPickups.Add(pickup);
         tile.linkedEntity = pickup;
     }
+
+    //PARTICULAS
+    void PlayAttackParticle(Vector3 position, PieceOwner owner)
+    {
+        if (attackParticlePrefab == null) return;
+
+        GameObject particle = Instantiate(attackParticlePrefab, position + Vector3.up * 0.5f, Quaternion.identity);
+
+        // CAMBIO DE COLOR
+        var main = particle.GetComponent<ParticleSystem>().main;
+        if (owner == PieceOwner.Player1)
+            main.startColor = lightBlueMaterial.color;
+        else
+            main.startColor = pinkMaterial.color;
+
+        Destroy(particle, 2f);
+    }
+
+    //SE DETECTA EL FINAL DE LA PARTIDA
+    public void CheckForGameEnd()
+    {
+        int player1Count = GetPlayerPieceCount(PieceOwner.Player1);
+        int player2Count = GetPlayerPieceCount(PieceOwner.Player2);
+
+        if (player1Count == 0)
+        {
+            ShowVictory(PieceOwner.Player2);
+        }
+        else if (player2Count == 0)
+        {
+            ShowVictory(PieceOwner.Player1);
+        }
+    }
+
+    void ShowVictory(PieceOwner winner)
+    {
+        if (victoryText != null)
+        {
+            victoryText.text = $"{winner} won!";
+            victoryText.gameObject.SetActive(true);
+        }
+        if (restartButton != null)
+            restartButton.SetActive(true);
+
+        Time.timeScale = 0f; 
+        gameEnded = true;   
+    }
+
+
+    public void RestartGame()
+    {
+        Time.timeScale = 1f;
+        gameEnded = false;
+        UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
+    }
+
+
+
 }
